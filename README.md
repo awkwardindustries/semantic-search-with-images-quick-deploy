@@ -41,6 +41,18 @@ This solution includes two applications:
 
 ## Deploy up to Azure
 
+### Resource Group scoping
+
+To enable resource group scoping (an alpha feature), run:
+```sh
+azd config set alpha.resourceGroupDeployments on
+```
+
+Set the resource group to be used (after creating your AZD environment):
+```sh
+azd env set AZURE_RESOURCE_GROUP "YOUR-RESOURCE-GROUP-NAME-HERE"
+```
+
 ### Step 1: Authenticate to your environment
 
 ```sh

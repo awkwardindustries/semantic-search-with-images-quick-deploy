@@ -1,4 +1,4 @@
-targetScope = 'subscription'
+targetScope = 'resourceGroup'
 
 // The main bicep module to provision Azure resources.
 // For a more complete walkthrough to understand how this file works with azd,
@@ -18,7 +18,7 @@ param location string
 // "resourceGroupName": {
 //      "value": "myGroupName"
 // }
-param resourceGroupName string = ''
+//param resourceGroupName string = ''
 
 @minLength(1)
 @description('Query key for read-only access to the source AI Search resource')
@@ -50,20 +50,19 @@ var tags = {
 // Generate a unique token to be used in naming resources.
 // Remove linter suppression after using.
 #disable-next-line no-unused-vars
-var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+var resourceToken = toLower(uniqueString(resourceGroup().id, environmentName, location))
 
 // Organize resources in a resource group
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
-  location: location
-  tags: tags
-}
+// resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+//   name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
+//   location: location
+//   tags: tags
+// }
 
 // AI Vision (Computer Vision) resource for multimodal embeddings
 
 module vision 'core/ai/cognitiveservices.bicep' = {
   name: 'ai-vision'
-  scope: rg
   params: {
     name: 'cv-${resourceToken}'
     location: location
@@ -79,7 +78,6 @@ module vision 'core/ai/cognitiveservices.bicep' = {
 
 module search './core/search/search-services.bicep' = {
   name: 'search'
-  scope: rg
   params: {
     name: '${abbrs.searchSearchServices}${resourceToken}'
     location: location
@@ -91,7 +89,6 @@ module search './core/search/search-services.bicep' = {
 
 module keyVault './core/security/keyvault.bicep' = {
   name: 'keyvault'
-  scope: rg
   params: {
     name: '${abbrs.keyVaultVaults}${resourceToken}'
     location: location
@@ -103,7 +100,6 @@ module keyVault './core/security/keyvault.bicep' = {
 // Key Vault Secret for query key
 
 module keyVaultSecret './core/security/keyvault-secret.bicep' = {
-  scope: rg
   name: 'keyvault-secret'
   params: {
     keyVaultName: keyVault.outputs.name
@@ -116,7 +112,6 @@ module keyVaultSecret './core/security/keyvault-secret.bicep' = {
 
 module storage './core/storage/storage-account.bicep' = {
   name: 'storage'
-  scope: rg
   params: {
     name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
@@ -128,7 +123,6 @@ module storage './core/storage/storage-account.bicep' = {
 
 module monitoring './core/monitor/monitoring.bicep' = {
   name: 'monitoring'
-  scope: rg
   params: {
     location: location
     tags: tags
@@ -142,7 +136,6 @@ module monitoring './core/monitor/monitoring.bicep' = {
 
 module appServicePlan './core/host/appserviceplan.bicep' = {
   name: 'appserviceplan'
-  scope: rg
   params: {
     name: '${abbrs.webServerFarms}${resourceToken}'
     location: location
@@ -157,7 +150,6 @@ module appServicePlan './core/host/appserviceplan.bicep' = {
 // Application backend API (Function App)
 module api './app/api.bicep' = {
   name: 'api'
-  scope: rg
   dependsOn: [
     vision
     search
@@ -185,7 +177,7 @@ module api './app/api.bicep' = {
 // To see these outputs, run `azd env get-values`,  or `azd env get-values --output json` for json output.
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
-output AZURE_RESOURCE_GROUP string = rg.name
+output AZURE_RESOURCE_GROUP string = resourceGroup().name
 output SOURCE_AI_SEARCH_KEY_SECRET_NAME string = sourceSearchKeySecretName
 output SOURCE_AI_SEARCH_ENDPOINT string = 'https://${sourceSearchName}.search.windows.net'
 output SOURCE_AI_SEARCH_INDEX_NAME string = sourceSearchIndexName
